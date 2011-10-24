@@ -1,0 +1,33 @@
+<h1>Listing calls</h1>
+
+<table>
+  <tr>
+    <th>Call</th>
+    <th>Caller</th>
+    <th>Called</th>
+    <th>Call type</th>
+    <th>Call start</th>
+    <th>Call end</th>
+    <th></th>
+    <th></th>
+    <th></th>
+  </tr>
+
+<% @calls.each do |call| %>
+  <tr>
+    <td><%= call.call_id %></td>
+    <td><%= call.caller_id %></td>
+    <td><%= call.called_id %></td>
+    <td><%= call.call_type %></td>
+    <td><%= call.call_start %></td>
+    <td><%= call.call_end %></td>
+    <td><%= link_to 'Show', call %></td>
+    <td><%= link_to 'Edit', edit_call_path(call) %></td>
+    <td><%= link_to 'Destroy', call, confirm: 'Are you sure?', method: :delete %></td>
+  </tr>
+<% end %>
+</table>
+
+<br />
+
+<%= link_to 'New Call', new_call_path %>
