@@ -1,3 +1,4 @@
+/*
 var chart;
 $(document).ready(function() {
    chart = new Highcharts.Chart({
@@ -54,7 +55,8 @@ $(document).ready(function() {
                	y: 12.8,
                	sliced: true,
                	selected: true,
-				name: 'Chrome versions',
+				drilldown: {
+							   name: 'Chrome versions',
 				               categories: ['Chrome 5.0', 'Chrome 6.0', 'Chrome 7.0', 'Chrome 8.0', 'Chrome 9.0', 
 				                  'Chrome 10.0', 'Chrome 11.0', 'Chrome 12.0'],
 				               data: [0.12, 0.19, 0.12, 0.36, 0.32, 9.91, 0.50, 0.22]
@@ -81,7 +83,7 @@ $(document).ready(function() {
 			},
             {
 				name: 'Others',   
-				y: 0.7
+				y: 0.7,
 				drilldown: {
 				               name: 'Others versions',
 				               categories: ['Others'],
@@ -92,3 +94,4 @@ $(document).ready(function() {
       }]
    });
 });
+*/

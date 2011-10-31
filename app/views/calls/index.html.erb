@@ -1,33 +1,29 @@
-<h1>Listing calls</h1>
+<%= content_for :sidebar do %>
+	
+<% end %>
+
+<h1>Journal d'appels</h1>
 
 <table>
   <tr>
-    <th>Call</th>
-    <th>Caller</th>
-    <th>Called</th>
-    <th>Call type</th>
-    <th>Call start</th>
-    <th>Call end</th>
-    <th></th>
-    <th></th>
-    <th></th>
+    <th>ID de l'appel</th>
+    <th>Appelant</th>
+    <th>Appelé</th>
+    <th>Type de l'appel</th>
+    <th>Début de l'appel</th>
+    <th>Fin de l'appel</th>
+	<th>Durée de l'appel</th>
   </tr>
 
 <% @calls.each do |call| %>
-  <tr>
-    <td><%= call.call_id %></td>
-    <td><%= call.caller_id %></td>
-    <td><%= call.called_id %></td>
-    <td><%= call.call_type %></td>
-    <td><%= call.call_start %></td>
-    <td><%= call.call_end %></td>
-    <td><%= link_to 'Show', call %></td>
-    <td><%= link_to 'Edit', edit_call_path(call) %></td>
-    <td><%= link_to 'Destroy', call, confirm: 'Are you sure?', method: :delete %></td>
+  <tr class="<%= cycle("even", "odd") %>">
+    <td class="center"><%= call.call_id %></td>
+    <td class="center"><%= call.caller_id %></td>
+    <td class="center"><%= call.called_id %></td>
+    <td class="center"><%= call.call_type %></td>
+    <td class="center"><%= call.call_start.strftime("%d/%m/%Y %H:%M:%S") %></td>
+    <td class="center"><%= call.call_end.strftime("%d/%m/%Y %H:%M:%S") %></td>
+	<td class="center"><%= (min = (call.call_duration / 60).round) > 0 ? "#{min}min" : "" %> <%= (call.call_duration % 60).round %>sec</td>
   </tr>
 <% end %>
 </table>
-
-<br />
-
-<%= link_to 'New Call', new_call_path %>

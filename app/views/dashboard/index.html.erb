@@ -1,0 +1,22 @@
+<h1>Tableau de bord</h1>
+
+<h2>Appels durant la journée</h2>
+<%= high_chart("calls_daily", @hourly_chart) do |c| %>
+	<%= "options.plotOptions = { pie: { dataLabels: { enabled: true, distance: -20 } }, area: { dataLabels: { enabled: true } } }"  %>
+	<%= "options.tooltip = {
+	         formatter: function() {
+	            var s;
+	            if (this.point.name) { // the pie chart
+	               s = ''+
+	                  this.point.name +': '+ this.y +' appels';
+	            } else {
+	               s = ''+
+	                  this.x  +': '+ this.y + ' appels';
+	            }
+	            return s;
+	         }
+	      }" %>
+<% end %>
+
+<h2>Appels durant le mois</h2>
+<%= high_chart("calls_monthly", @daily_chart) %>
