@@ -2,18 +2,16 @@
 
 class DashboardController < ApplicationController
   def index
-    map = "function() { emit(this.call_hour, { count: 1, call_type: this.call_type  }); }"
-    reduce = "function(key, values) { var result = {count: 0, answer_count: 0, originate_count: 0}; values.forEach(function(value) { result.count += value.count; if (value.call_type == 'originate') { result.originate_count += value.originate_count; } else { result.answer_count += value.answer_count }; }); return result;}"
-    @calls_by_hours = Call.collection.map_reduce(map, reduce, { :query => {"call_date" => Date.today.to_s }}).find.inject(Hash.new(0)) {|h, i| h[i.values[0].to_i] = i.values[1]; h }
+    @calls_by_hours = Call.collection.map_reduce(map_hourly, reduce_hourly, { :out => "mapreduceCalls", :query => {"call_date" => Date.today.to_s }}).find.inject(Hash.new(0)) {|h, i| h[i.values[0].to_i] = i.values[1]; h }
     hours = (0..23).to_a
     values = []
     originated = 0
     answered = 0
     totals = 0
     hours.each do |h|
-      values << @calls_by_hours[h][:count]
-      originated += 1 if @calls_by_hours[h][:call_type] == "originate"
-      answered += 1 if @calls_by_hours[h][:call_type] == "answer"
+      #values << @calls_by_hours[h][:count]
+      #originated += 1 if @calls_by_hours[h][:call_type] == "originate"
+      #answered += 1 if @calls_by_hours[h][:call_type] == "answer"
       totals += 1
     end
     
@@ -32,7 +30,7 @@ class DashboardController < ApplicationController
     
     map = "function() { emit(this.call_date, 1); }"
     reduce = "function(k, vals) { var sum = 0; for(var i in vals) sum += vals[i]; return sum; }"
-    @calls_by_days = Call.collection.map_reduce(map, reduce).find.inject(Hash.new(0)) {|h, i| h[i.values[0]] = i.values[1]; h }
+    @calls_by_days = Call.collection.map_reduce(map, reduce, { :out => "calls" }).find.inject(Hash.new(0)) {|h, i| h[i.values[0]] = i.values[1]; h }
     days = (1..31).to_a
     values = []
     days.each do |d|
@@ -44,5 +42,34 @@ class DashboardController < ApplicationController
       f.options[:xAxis][:categories] = days
       f.series(:name=>'Appels / j', :data => values)
     end
+  end
+  
+  def map_hourly
+    <<-MAP
+      function() { 
+        if (this.call_type == 'answer') { 
+            emit(this.call_hour, { count: 1, answer_count: 1, call_type: 'answer' }); 
+          } else { 
+            emit(this.call_hour, { count: 1, originate_count: 1, call_type: 'originate' }); 
+          }
+        }
+      MAP
+  end
+  
+  def reduce_hourly
+    <<-REDUCE
+      function(key, values) { 
+        var result = {count: 0, answer_count: 0, originate_count: 0}; 
+        values.forEach(function(value) { 
+          result.count += value.count; 
+          if (value.call_type == 'originate') { 
+            result.originate_count += value.originate_count; 
+          } else { 
+            result.answer_count += value.answer_count;
+          } 
+          }); 
+        return result;
+      }
+    REDUCE
   end
 end
