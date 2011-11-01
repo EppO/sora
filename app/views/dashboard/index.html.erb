@@ -2,16 +2,24 @@
 
 <h2>Appels durant la journée</h2>
 <%= high_chart("calls_daily", @hourly_chart) do |c| %>
-	<%= "options.plotOptions = { pie: { dataLabels: { enabled: true, distance: -20 } }, area: { dataLabels: { enabled: true } } }"  %>
+	<%= "options.plotOptions = { 	pie: { dataLabels: { enabled: true, distance: -20 } }, 
+									column: { stacking: 'normal', dataLabels: { enabled: true, color: 'white' } } }"  %>
+	<%= "options.plotOptions.column.dataLabels.formatter = function() { if (this.y) return this.y; }  " %>
 	<%= "options.tooltip = {
 	         formatter: function() {
 	            var s;
 	            if (this.point.name) { // the pie chart
-	               s = ''+
-	                  this.point.name +': '+ this.y +' appels';
+					s = this.point.name +': '+ this.y;
+					if (this.point.name == 'originate')
+	               		s += ' % (#{@originated_calls_by_hours[:total]} appels)';
+					else
+						s += ' % (#{@answered_calls_by_hours[:total]} appels)';
 	            } else {
-	               s = ''+
-	                  this.x  +': '+ this.y + ' appels';
+					 s = this.x  +': '+ this.y;
+					if (this.series.name == 'Appels (originate)')
+	              		s+= ' appels (originate)';
+					else
+						s+= ' appels (answer)';
 	            }
 	            return s;
 	         }
