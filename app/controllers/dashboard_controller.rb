@@ -2,72 +2,82 @@
 
 class DashboardController < ApplicationController
   def index
-    @calls_by_hours = Call.collection.map_reduce(map_hourly, reduce_hourly, { :out => "mapreduceCalls", :query => {"call_date" => Date.today.to_s }}).find.inject(Hash.new(0)) {|h, i| h[i.values[0].to_i] = i.values[1]; h }
+    @originated_calls_by_hours = Call.collection.map_reduce(map("call_hour"), reduce, { :out => { :inline => 1 }, :query => {"call_date" => Date.today.to_s, "call_type" => "originate" }}).find.inject(Hash.new(0)) {|h, i| h[i.values[0].to_i] = i.values[1]; h }
+    @answered_calls_by_hours = Call.collection.map_reduce(map("call_hour"), reduce, { :out => { :inline => 1 }, :query => {"call_date" => Date.today.to_s, "call_type" => "answer" }}).find.inject(Hash.new(0)) {|h, i| h[i.values[0].to_i] = i.values[1]; h }
     hours = (0..23).to_a
-    values = []
-    originated = 0
-    answered = 0
-    totals = 0
+    originated_h = []
+    answered_h = []
+    max_hour = 0
     hours.each do |h|
-      #values << @calls_by_hours[h][:count]
-      #originated += 1 if @calls_by_hours[h][:call_type] == "originate"
-      #answered += 1 if @calls_by_hours[h][:call_type] == "answer"
-      totals += 1
+      originated_h << @originated_calls_by_hours[h]
+      answered_h << @answered_calls_by_hours[h]
+      max_hour = @originated_calls_by_hours[h] + @answered_calls_by_hours[h] if @originated_calls_by_hours[h] + @answered_calls_by_hours[h] > max_hour
     end
+    @originated_calls_by_hours[:total] = @originated_calls_by_hours.inject(0) { |sum,x| sum+x[1] }
+    @answered_calls_by_hours[:total] = @answered_calls_by_hours.inject(0) { |sum,x| sum+x[1] }
+    hourly_calls_total = @originated_calls_by_hours[:total] + @answered_calls_by_hours[:total]
     
     @hourly_chart = LazyHighCharts::HighChart.new('graph') do |f|
       f.options[:title][:text] = "Appels par heure durant la journée"
-      f.options[:chart][:defaultSeriesType] = "areaspline"
+      f.options[:chart][:defaultSeriesType] = "column"
       f.options[:xAxis][:categories] = hours.map { |h| "#{h}h"}
-      f.options[:yAxis][:title] = "Appels / h"
-      f.options[:yAxis][:max] = 9
-      f.options[:yAxis][:tickInterval] = 2
-      f.options[:yAxis][:minorTickInterval] = 1
-      f.series(:name =>"Appels / h", :data => values, :yAxis => 0 )
-      f.series(:name => "Type d'appels", :type => "pie", :data => [ { :name => "Answer", :yreduce => (answered / totals * 100).round }, { :name => "originate", :y => (originated / totals * 100).round } ], :center =>  [80, 20],
-               :size =>  100, :showInLegend => false, :yAxis => 1) if totals > 0
+      f.options[:yAxis] = [ { :title => { :text => "Appels / h" }, :max => max_hour + 3, :tickInterval => 2, :minorTickInterval => 1, 
+                              :stackLabels => { :enabled =>  true, :style => { :fontWeight => 'bold', :color => 'gray' }}}, 
+                            { :title => { :text => nil } } ]
+      f.series(:name =>"Appels (originate)", :data => originated_h, :yAxis => 0, :stack => 0 )
+      f.series(:name =>"Appels (answer)", :data => answered_h, :yAxis => 0, :stack => 0 )
+      f.series(:name => "Type d'appels", :type => "pie", :data => [ { :name => "answer", :y => (@answered_calls_by_hours[:total] / hourly_calls_total * 100).round, color: '#AA4643' }, 
+                                                                    { :name => "originate", :y => (@originated_calls_by_hours[:total] / hourly_calls_total * 100).round, color: '#4572A7' } ], 
+                                                                    :center =>  [80, 20], :size =>  100, :showInLegend => false, :yAxis => 1) if hourly_calls_total > 0
     end
     
-    map = "function() { emit(this.call_date, 1); }"
-    reduce = "function(k, vals) { var sum = 0; for(var i in vals) sum += vals[i]; return sum; }"
-    @calls_by_days = Call.collection.map_reduce(map, reduce, { :out => "calls" }).find.inject(Hash.new(0)) {|h, i| h[i.values[0]] = i.values[1]; h }
-    days = (1..31).to_a
-    values = []
+    @originated_calls_by_days = Call.collection.map_reduce(map("call_date"), reduce, { :out => { :inline => 1 }, :query => { "call_type" => "originate" }}).find.inject(Hash.new(0)) {|h, i| h[i.values[0]] = i.values[1]; h }
+    @answered_calls_by_days = Call.collection.map_reduce(map("call_date"), reduce, { :out => { :inline => 1 }, :query => { "call_type" => "answer" } }).find.inject(Hash.new(0)) {|h, i| h[i.values[0]] = i.values[1]; h }
+    days = (1..(Date.today.end_of_month.day)).to_a
+    originated_d = []
+    answered_d = []
+    max_day = 0
     days.each do |d|
-      values << @calls_by_days["2011-10-#{(d < 10 ? "0" : "") + d.to_s }"]
+      date = "#{Date.today.year}-#{Date.today.month}-#{(d < 10 ? "0" : "") + d.to_s }"
+      originated_d << @originated_calls_by_days[date]
+      answered_d << @answered_calls_by_days[date]
+      max_day = @originated_calls_by_days[date] + @answered_calls_by_days[date] if @originated_calls_by_days[date] + @answered_calls_by_days[date] > max_day
     end
+    @originated_calls_by_days[:total] = @originated_calls_by_hours.inject(0) { |sum,x| sum+x[1] }
+    @answered_calls_by_days[:total] = @answered_calls_by_hours.inject(0) { |sum,x| sum+x[1] }
+    daily_calls_total = @originated_calls_by_days[:total] + @answered_calls_by_days[:total]
+    
     @daily_chart = LazyHighCharts::HighChart.new('graph') do |f|
       f.options[:title][:text] = "Appels par jour durant ce mois"
-      f.options[:chart][:defaultSeriesType] = "area"
+      f.options[:chart][:defaultSeriesType] = "column"
       f.options[:xAxis][:categories] = days
-      f.series(:name=>'Appels / j', :data => values)
+      f.options[:yAxis] = [ { :title => { :text => "Appels / h" }, :max => max_day + 100, 
+                              :stackLabels => { :enabled =>  true, :style => { :fontWeight => 'bold', :color => 'gray' }}}, 
+                            { :title => { :text => nil } } ]
+      f.series(:name=>'Appels (originate)', :data => originated_d, :stack => 0 )
+      f.series(:name=>'Appels (answer)', :data => answered_d, :stack => 0 )
+      f.series(:name => "Type d'appels", :type => "pie", :data => [ { :name => "answer", :y => (@answered_calls_by_days[:total] / daily_calls_total * 100).round, color: '#AA4643' }, 
+                                                                    { :name => "originate", :y => (@originated_calls_by_days[:total] / daily_calls_total * 100).round, color: '#4572A7' } ], 
+                                                                    :center =>  [80, 20], :size =>  100, :showInLegend => false, :yAxis => 1) if daily_calls_total > 0
     end
   end
   
-  def map_hourly
-    <<-MAP
+  def map(arg)
+    query = <<-MAP
       function() { 
-        if (this.call_type == 'answer') { 
-            emit(this.call_hour, { count: 1, answer_count: 1, call_type: 'answer' }); 
-          } else { 
-            emit(this.call_hour, { count: 1, originate_count: 1, call_type: 'originate' }); 
-          }
-        }
-      MAP
+        emit(this.%<arg>s, 1); 
+      }
+    MAP
+    query % { :arg => arg }
   end
   
-  def reduce_hourly
+  def reduce
     <<-REDUCE
       function(key, values) { 
-        var result = {count: 0, answer_count: 0, originate_count: 0}; 
+        var result = 0; 
         values.forEach(function(value) { 
-          result.count += value.count; 
-          if (value.call_type == 'originate') { 
-            result.originate_count += value.originate_count; 
-          } else { 
-            result.answer_count += value.answer_count;
-          } 
-          }); 
+          result += value; 
+        }); 
         return result;
       }
     REDUCE
