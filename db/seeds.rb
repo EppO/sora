@@ -13,10 +13,12 @@ call_types = [ "answer", "originate" ]
 
 for i in 500..rand(10000)+500 do
   call_date = dates[rand(dates.size)]
-  call_start = call_date.to_datetime + rand(24).hours + rand(60).minutes + rand(60).seconds
-  call_end = call_start + rand(60).minutes + rand(60).seconds
-  duration = call_end - call_start
+  begin
+    call_start = call_date.to_time + rand(24).hours + rand(60).minutes + rand(60).seconds
+    call_end = call_start + rand(60).minutes + rand(60).seconds
+    duration = call_end.to_time - call_start.to_time
+  end until (call_date != Date.today) || (call_end.to_time < Time.now)
   Call.create(:call_id => rand(100)*rand(100)*rand(100)*rand(100), :caller_id => callers[rand(callers.size)], :called_id => called[rand(called.size)], 
               :call_type => call_types[rand(call_types.size)], :call_start => call_start, :call_end => call_end, 
-              :call_date => call_date, :call_hour => rand(24), :call_duration => duration)
+              :call_date => call_date, :call_hour => call_start.hour, :call_duration => duration)
 end
